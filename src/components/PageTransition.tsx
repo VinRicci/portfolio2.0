@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ScrollSmoother } from "gsap/ScrollSmoother";
 
 export default function PageTransition({
   children,
@@ -11,6 +13,7 @@ export default function PageTransition({
 }) {
   const pathname = usePathname();
   const overlayRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const prevPathname = useRef(pathname);
   const origin = useRef({ x: 0, y: 0 });
 
@@ -27,6 +30,7 @@ export default function PageTransition({
     prevPathname.current = pathname;
 
     const overlay = overlayRef.current;
+    const content = contentRef.current;
     if (!overlay) return;
 
     const { x, y } = origin.current;
@@ -35,14 +39,24 @@ export default function PageTransition({
       Math.max(y, window.innerHeight - y),
     );
 
+    ScrollSmoother.get()?.scrollTo(0, false);
+
     gsap.set(overlay, {
       clipPath: `circle(${maxRadius}px at ${x}px ${y}px)`,
     });
-    gsap.to(overlay, {
+    if (content) gsap.set(content, { opacity: 0 });
+
+    const tl = gsap.timeline({
+      onComplete: () => ScrollTrigger.refresh(),
+    });
+    tl.to(overlay, {
       clipPath: `circle(0px at ${x}px ${y}px)`,
       duration: 0.8,
       ease: "power3.inOut",
     });
+    if (content) {
+      tl.to(content, { opacity: 1, duration: 0.4, ease: "power2.out" }, 0.35);
+    }
   }, [pathname]);
 
   return (
@@ -53,7 +67,7 @@ export default function PageTransition({
         className="pointer-events-none fixed inset-0 z-50 bg-zinc-600 will-change-[clip-path]"
         style={{ clipPath: "circle(0px at 0px 0px)" }}
       />
-      {children}
+      <div ref={contentRef}>{children}</div>
     </>
   );
 }

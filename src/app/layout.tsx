@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import PageTransition from "@/components/PageTransition";
+import SmoothScroller from "@/components/SmoothScroller";
+import Cursor from "@/components/Cursor";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,7 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <PageTransition>{children}</PageTransition>
+        <Cursor />
+        <PageTransition>
+          <SmoothScroller>{children}</SmoothScroller>
+        </PageTransition>
       </body>
     </html>
   );

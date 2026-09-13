@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { createPortal } from "react-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MagneticLink from "@/components/MagneticLink";
@@ -14,6 +21,14 @@ const links = [
   { href: "/#about", label: "About" },
   { href: "/#contact", label: "Contact" },
 ];
+
+const noopSubscribe = () => () => {};
+const useMounted = () =>
+  useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
 
 function NavLink({
   href,
@@ -67,6 +82,7 @@ function NavLink({
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const mounted = useMounted();
   const headerRef = useRef<HTMLElement>(null);
   const mobilePanelRef = useRef<HTMLDivElement>(null);
   const mobileLinkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -214,47 +230,57 @@ export default function Header() {
         ))}
       </nav>
 
-      <button
-        type="button"
-        data-header-reveal=""
-        onClick={() => setIsOpen((open) => !open)}
-        aria-expanded={isOpen}
-        aria-label={isOpen ? "Close menu" : "Open menu"}
-        className="flex h-8 w-8 flex-col items-center justify-center gap-1.5 sm:hidden"
-      >
-        <span
-          className={`h-px w-5 bg-black transition-transform duration-300 dark:bg-white ${
-            isOpen ? "translate-y-[3.5px] rotate-45" : ""
-          }`}
-        />
-        <span
-          className={`h-px w-5 bg-black transition-transform duration-300 dark:bg-white ${
-            isOpen ? "-translate-y-[3.5px] -rotate-45" : ""
-          }`}
-        />
-      </button>
+      {/* Mobile menu trigger + panel are portaled to <div id="menu-root"> in
+          the root layout: header is pinned via a GSAP transform, and that
+          (plus ScrollSmoother's own transform on #smooth-content) would
+          otherwise become the containing block for a nested `fixed` panel,
+          collapsing it instead of covering the viewport. */}
+      {mounted &&
+        createPortal(
+          <>
+            <button
+              type="button"
+              onClick={() => setIsOpen((open) => !open)}
+              aria-expanded={isOpen}
+              aria-label={isOpen ? "Close menu" : "Open menu"}
+              className="fixed right-6 top-5 z-[70] flex h-8 w-8 flex-col items-center justify-center gap-1.5 sm:hidden"
+            >
+              <span
+                className={`h-px w-5 bg-black transition-transform duration-300 dark:bg-white ${
+                  isOpen ? "translate-y-[3.5px] rotate-45" : ""
+                }`}
+              />
+              <span
+                className={`h-px w-5 bg-black transition-transform duration-300 dark:bg-white ${
+                  isOpen ? "-translate-y-[3.5px] -rotate-45" : ""
+                }`}
+              />
+            </button>
 
-      <div
-        ref={mobilePanelRef}
-        className={`fixed inset-x-0 top-[73px] bottom-0 flex flex-col justify-center gap-6 bg-white px-6 dark:bg-black sm:hidden ${
-          isOpen ? "pointer-events-auto" : "pointer-events-none"
-        }`}
-        style={{ opacity: 0 }}
-      >
-        {links.map((link, index) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={() => setIsOpen(false)}
-            ref={(el) => {
-              mobileLinkRefs.current[index] = el;
-            }}
-            className="text-4xl font-bold tracking-tight"
-          >
-            {link.label}
-          </Link>
-        ))}
-      </div>
+            <div
+              ref={mobilePanelRef}
+              className={`fixed inset-0 z-[65] flex flex-col justify-center gap-6 bg-white px-6 pt-16 dark:bg-black sm:hidden ${
+                isOpen ? "pointer-events-auto" : "pointer-events-none"
+              }`}
+              style={{ opacity: 0 }}
+            >
+              {links.map((link, index) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsOpen(false)}
+                  ref={(el) => {
+                    mobileLinkRefs.current[index] = el;
+                  }}
+                  className="text-4xl font-bold tracking-tight"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </>,
+          document.getElementById("menu-root")!,
+        )}
     </header>
   );
 }

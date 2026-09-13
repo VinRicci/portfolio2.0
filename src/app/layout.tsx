@@ -31,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <PageTransition>
           <SmoothScroller>{children}</SmoothScroller>
         </PageTransition>
+        <div id="menu-root" />
       </body>
     </html>
   );
